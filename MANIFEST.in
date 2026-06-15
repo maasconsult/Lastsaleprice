@@ -1,0 +1,7 @@
+recursive-include last_sale_price *.py
+recursive-include last_sale_price *.js
+recursive-include last_sale_price *.css
+recursive-include last_sale_price *.json
+recursive-include last_sale_price *.txt
+recursive-include last_sale_price *.html
+recursive-include last_sale_price/public *
