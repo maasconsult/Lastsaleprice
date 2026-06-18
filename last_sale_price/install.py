@@ -7,6 +7,8 @@ TARGET_COLUMN_BREAK = "column_break_39"
 
 OLD_HTML_FIELD = "custom_last_sales_priceselectadd_a_item_to_view_the_price"
 
+VISIBLE_ONLY_IN_DRAFT = "eval:doc.docstatus==0"
+
 
 def after_install():
     create_last_sale_price_fields()
@@ -29,7 +31,8 @@ def create_last_sale_price_fields():
         fieldname=CHECK_FIELD,
         label="All",
         fieldtype="Check",
-        insert_after=insert_after
+        insert_after=insert_after,
+        depends_on=VISIBLE_ONLY_IN_DRAFT
     )
 
     create_custom_field(
@@ -37,11 +40,11 @@ def create_last_sale_price_fields():
         fieldname=HTML_FIELD,
         label="Add a Item to View the Last Sale Price",
         fieldtype="HTML",
-        insert_after=CHECK_FIELD
+        insert_after=CHECK_FIELD,
+        depends_on=VISIBLE_ONLY_IN_DRAFT
     )
 
     frappe.clear_cache(doctype="Sales Invoice")
-    frappe.db.commit()
 
 
 def get_last_field_in_column(doctype, column_break_fieldname):
@@ -72,18 +75,21 @@ def get_last_field_in_column(doctype, column_break_fieldname):
     return last_fieldname or column_break_fieldname
 
 
-def create_custom_field(doctype, fieldname, label, fieldtype, insert_after):
+def create_custom_field(doctype, fieldname, label, fieldtype, insert_after, depends_on=None):
     custom_field_name = doctype + "-" + fieldname
+
+    values = {
+        "label": label,
+        "fieldtype": fieldtype,
+        "insert_after": insert_after,
+        "depends_on": depends_on or ""
+    }
 
     if frappe.db.exists("Custom Field", custom_field_name):
         frappe.db.set_value(
             "Custom Field",
             custom_field_name,
-            {
-                "label": label,
-                "fieldtype": fieldtype,
-                "insert_after": insert_after
-            },
+            values,
             update_modified=True
         )
         return
@@ -94,7 +100,8 @@ def create_custom_field(doctype, fieldname, label, fieldtype, insert_after):
         "fieldname": fieldname,
         "label": label,
         "fieldtype": fieldtype,
-        "insert_after": insert_after
+        "insert_after": insert_after,
+        "depends_on": depends_on or ""
     })
 
     doc.insert(ignore_permissions=True)
