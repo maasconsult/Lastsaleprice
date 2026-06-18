@@ -1,11 +1,13 @@
 // Last Sale Price - Sales Invoice JS
 
 const LAST_PRICE_HTML_FIELD = "custom_last_sales_price";
+const CHECK_FIELD = "custom_all";
 const CHILD_TABLE_FIELD = "items";
 const CHILD_DOCTYPE = "Sales Invoice Item";
 
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
+        toggle_last_sale_price_fields(frm);
         bind_last_price_row_click(frm);
         show_last_price_for_current_row(frm);
     },
@@ -49,6 +51,21 @@ frappe.ui.form.on("Sales Invoice Item", {
         show_last_price_for_current_row(frm);
     }
 });
+
+function toggle_last_sale_price_fields(frm) {
+    const show_fields = cint(frm.doc.docstatus) === 0;
+
+    frm.toggle_display(CHECK_FIELD, show_fields);
+    frm.toggle_display(LAST_PRICE_HTML_FIELD, show_fields);
+
+    if (!show_fields) {
+        render_last_price_html(frm, "");
+    }
+}
+
+function is_last_sale_price_visible(frm) {
+    return cint(frm.doc.docstatus) === 0;
+}
 
 function bind_last_price_row_click(frm) {
     if (frm.__last_price_click_bound) return;
@@ -105,6 +122,12 @@ function get_selected_item_rows(frm) {
 }
 
 function show_last_price_for_current_row(frm) {
+    toggle_last_sale_price_fields(frm);
+
+    if (!is_last_sale_price_visible(frm)) {
+        return;
+    }
+
     const row = get_current_item_row(frm);
 
     if (!row || !row.item_code) {
@@ -131,6 +154,11 @@ function show_last_price_for_current_row(frm) {
         callback: function (r) {
             const rows = r.message || [];
 
+            if (!is_last_sale_price_visible(frm)) {
+                render_last_price_html(frm, "");
+                return;
+            }
+
             if (!rows.length) {
                 render_last_price_html(
                     frm,
@@ -146,7 +174,9 @@ function show_last_price_for_current_row(frm) {
             render_last_price_html(frm, get_price_table_html(frm, row.item_code, rows));
         },
         error: function () {
-            render_last_price_html(frm, get_box_html("Could not load last selling price."));
+            if (is_last_sale_price_visible(frm)) {
+                render_last_price_html(frm, get_box_html("Could not load last selling price."));
+            }
         }
     });
 }
