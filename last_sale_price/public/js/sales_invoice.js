@@ -220,7 +220,7 @@ function get_price_table_html(frm, item_code, rows) {
             <tr>
                 <td>${escape_html(frappe.datetime.str_to_user(row.posting_date || ""))}</td>
                 <td>
-                    <a href="/app/sales-invoice/${encodeURIComponent(row.invoice)}" target="_blank">
+                    <a href="/desk/sales-invoice/${encodeURIComponent(row.invoice)}" target="_blank">
                         ${escape_html(row.invoice)}
                     </a>
                 </td>
