@@ -4,6 +4,7 @@ import frappe
 HTML_FIELD = "custom_last_sales_price"
 CHECK_FIELD = "custom_all"
 TARGET_COLUMN_BREAK = "column_break_39"
+FALLBACK_INSERT_AFTER = "customer"
 
 OLD_HTML_FIELD = "custom_last_sales_priceselectadd_a_item_to_view_the_price"
 
@@ -23,7 +24,8 @@ def create_last_sale_price_fields():
 
     insert_after = get_last_field_in_column(
         doctype="Sales Invoice",
-        column_break_fieldname=TARGET_COLUMN_BREAK
+        column_break_fieldname=TARGET_COLUMN_BREAK,
+        fallback_insert_after=FALLBACK_INSERT_AFTER
     )
 
     create_custom_field(
@@ -47,7 +49,7 @@ def create_last_sale_price_fields():
     frappe.clear_cache(doctype="Sales Invoice")
 
 
-def get_last_field_in_column(doctype, column_break_fieldname):
+def get_last_field_in_column(doctype, column_break_fieldname, fallback_insert_after):
     meta = frappe.get_meta(doctype)
     fields = meta.fields or []
 
@@ -67,23 +69,26 @@ def get_last_field_in_column(doctype, column_break_fieldname):
             if field.fieldname not in [CHECK_FIELD, HTML_FIELD, OLD_HTML_FIELD]:
                 last_fieldname = field.fieldname
 
-    if not found_column:
-        frappe.throw(
-            "Column Break field '{0}' was not found in Sales Invoice.".format(column_break_fieldname)
-        )
+    if found_column:
+        return last_fieldname or column_break_fieldname
 
-    return last_fieldname or column_break_fieldname
+    if frappe.get_meta(doctype).has_field(fallback_insert_after):
+        return fallback_insert_after
+
+    return None
 
 
-def create_custom_field(doctype, fieldname, label, fieldtype, insert_after, depends_on=None):
+def create_custom_field(doctype, fieldname, label, fieldtype, insert_after=None, depends_on=None):
     custom_field_name = doctype + "-" + fieldname
 
     values = {
         "label": label,
         "fieldtype": fieldtype,
-        "insert_after": insert_after,
         "depends_on": depends_on or ""
     }
+
+    if insert_after:
+        values["insert_after"] = insert_after
 
     if frappe.db.exists("Custom Field", custom_field_name):
         frappe.db.set_value(
@@ -94,16 +99,19 @@ def create_custom_field(doctype, fieldname, label, fieldtype, insert_after, depe
         )
         return
 
-    doc = frappe.get_doc({
+    doc_values = {
         "doctype": "Custom Field",
         "dt": doctype,
         "fieldname": fieldname,
         "label": label,
         "fieldtype": fieldtype,
-        "insert_after": insert_after,
         "depends_on": depends_on or ""
-    })
+    }
 
+    if insert_after:
+        doc_values["insert_after"] = insert_after
+
+    doc = frappe.get_doc(doc_values)
     doc.insert(ignore_permissions=True)
 
 
